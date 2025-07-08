@@ -26,8 +26,9 @@ import {
   listResourceTemplates,
   readResource,
 } from "./resources.js";
+import { MCPSamplingLLMClient } from "./mcp-sampling-client.js";
 
-// Define Stagehand configuration
+// Define Stagehand configuration (will be updated after server initialization)
 export const stagehandConfig: ConstructorParams = {
   env:
     process.env.BROWSERBASE_API_KEY && process.env.BROWSERBASE_PROJECT_ID
@@ -67,10 +68,37 @@ export const stagehandConfig: ConstructorParams = {
     apiKey: process.env.OPENAI_API_KEY,
   } /* Configuration options for the model client */,
   useAPI: false,
+  // llmProvider will be set after server initialization based on sampling capability
 };
 
 // Global state
 let stagehand: Stagehand | undefined;
+let mcpSamplingClient: MCPSamplingLLMClient | undefined;
+
+/**
+ * Configure LLM provider based on MCP client capabilities
+ */
+function configureLLMProvider(server: Server) {
+  const clientCapabilities = server.getClientCapabilities();
+  const hasSamplingCapability = !!(clientCapabilities?.sampling);
+  
+  log(`MCP client sampling capability: ${hasSamplingCapability ? 'available' : 'not available'}`, "info");
+  
+  if (hasSamplingCapability) {
+    log("Using MCP Sampling for LLM requests", "info");
+    mcpSamplingClient = new MCPSamplingLLMClient(server, stagehandConfig.modelName || "gpt-4o");
+    stagehandConfig.llmClient = mcpSamplingClient;
+    
+    // Remove API key requirement when using sampling
+    delete stagehandConfig.modelClientOptions;
+  } else {
+    log("Using OpenAI API key for LLM requests", "info");
+    if (!process.env.OPENAI_API_KEY) {
+      log("No OpenAI API key provided and MCP client doesn't support sampling. LLM features may not work.", "error");
+    }
+    // Keep existing configuration
+  }
+}
 
 // Ensure Stagehand is initialized
 export async function ensureStagehand() {
@@ -137,6 +165,11 @@ export function createServer() {
 
   // Store server instance for logging
   setServerInstance(server);
+
+  // Configure LLM provider after initialization
+  server.oninitialized = () => {
+    configureLLMProvider(server);
+  };
 
   // Setup request handlers
   server.setRequestHandler(ListToolsRequestSchema, async (request) => {
