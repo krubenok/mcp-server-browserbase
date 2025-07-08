@@ -28,7 +28,7 @@ import {
 } from "./resources.js";
 import { MCPSamplingLLMClient } from "./mcp-sampling-client.js";
 
-// Define Stagehand configuration (will be updated after server initialization)
+// Define Stagehand configuration
 export const stagehandConfig: ConstructorParams = {
   env:
     process.env.BROWSERBASE_API_KEY && process.env.BROWSERBASE_PROJECT_ID
@@ -81,10 +81,16 @@ let mcpSamplingClient: MCPSamplingLLMClient | undefined;
 function configureLLMProvider(server: Server) {
   const clientCapabilities = server.getClientCapabilities();
   const hasSamplingCapability = !!(clientCapabilities?.sampling);
+  const hasOpenAIKey = !!process.env.OPENAI_API_KEY;
   
   log(`MCP client sampling capability: ${hasSamplingCapability ? 'available' : 'not available'}`, "info");
+  log(`OpenAI API key: ${hasOpenAIKey ? 'provided' : 'not provided'}`, "info");
   
-  if (hasSamplingCapability) {
+  // Prefer OpenAI API key over sampling if both are available
+  if (hasOpenAIKey) {
+    log("Using OpenAI API key for LLM requests", "info");
+    // Keep existing configuration
+  } else if (hasSamplingCapability) {
     log("Using MCP Sampling for LLM requests", "info");
     mcpSamplingClient = new MCPSamplingLLMClient(server, stagehandConfig.modelName || "gpt-4o");
     stagehandConfig.llmClient = mcpSamplingClient;
@@ -92,11 +98,7 @@ function configureLLMProvider(server: Server) {
     // Remove API key requirement when using sampling
     delete stagehandConfig.modelClientOptions;
   } else {
-    log("Using OpenAI API key for LLM requests", "info");
-    if (!process.env.OPENAI_API_KEY) {
-      log("No OpenAI API key provided and MCP client doesn't support sampling. LLM features may not work.", "error");
-    }
-    // Keep existing configuration
+    log("No OpenAI API key provided and MCP client doesn't support sampling. LLM features may not work.", "error");
   }
 }
 

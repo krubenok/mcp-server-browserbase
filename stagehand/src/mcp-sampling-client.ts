@@ -63,8 +63,14 @@ export class MCPSamplingLLMClient extends LLMClient {
           systemPrompt: this.getSystemPrompt(messages),
           modelPreferences: {
             hints: [{
+              // This is a preference hint, not a requirement. The MCP client
+              // ultimately decides which models are available and which to use.
               name: this.modelName,
             }],
+            // Priority values optimized for web automation tasks:
+            // - High intelligence (0.8) needed for understanding complex web pages and user interactions
+            // - Moderate cost (0.5) as web automation often requires multiple LLM calls
+            // - Moderate speed (0.5) as accuracy is more important than speed for reliable automation
             costPriority: 0.5,
             speedPriority: 0.5,
             intelligencePriority: 0.8,
