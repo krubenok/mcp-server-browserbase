@@ -164,6 +164,41 @@ Provides utility functions:
 - Observe possible actions on web pages
 - Simple and extensible API
 - Model-agnostic support for various LLM providers
+- **MCP Sampling support** - Use client-side LLM handling instead of API keys
+
+## Environment Variables
+
+- `BROWSERBASE_API_KEY`: API key for BrowserBase authentication
+- `BROWSERBASE_PROJECT_ID`: Project ID for BrowserBase
+- `OPENAI_API_KEY`: API key for OpenAI (used by Stagehand when MCP Sampling is not available)
+- `DEBUG`: Enable debug logging
+
+## MCP Sampling Support
+
+This server supports **MCP Sampling**, which allows the MCP client to handle LLM requests instead of requiring a direct OpenAI API key. This feature provides several benefits:
+
+- **No API Key Required**: When your MCP client supports sampling, you don't need to provide an `OPENAI_API_KEY`
+- **Model Flexibility**: The client can choose which model to use for each request
+- **Human-in-the-Loop**: MCP clients can present requests to users for approval before processing
+- **Cost Control**: Clients can manage LLM usage and costs centrally
+
+### How it Works
+
+1. **Automatic Detection**: The server automatically detects if your MCP client supports sampling
+2. **Preferred Mode**: If sampling is available, it takes precedence over the OpenAI API key
+3. **Fallback Support**: If sampling is not available, the server falls back to using the `OPENAI_API_KEY`
+4. **Seamless Integration**: No configuration changes needed - the server adapts automatically
+
+### Client Requirements
+
+For MCP Sampling to work, your MCP client must:
+- Support the MCP Sampling protocol (`sampling/createMessage`)
+- Advertise the `sampling` capability during initialization
+- Handle sampling requests and return completions in the expected format
+
+Popular clients that support MCP Sampling include:
+- Claude Desktop (with sampling enabled)
+- Other MCP clients that implement the sampling specification
 
 ## Environment Variables
 
